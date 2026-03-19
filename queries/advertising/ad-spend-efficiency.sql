@@ -1,6 +1,11 @@
 -- ad-spend-efficiency.sql
 -- 일별 광고비 효율 분석 (CPC, CPM, CPA 추이)
--- $1: 시작일, $2: 종료일
+-- ================================================================
+-- @param_count  2
+-- @param  $1  DATE  필수  시작일 (YYYY-MM-DD)
+-- @param  $2  DATE  필수  종료일 (YYYY-MM-DD)
+-- @example  bq_run_sql queries/advertising/ad-spend-efficiency.sql "2026-03-01" "2026-03-19"
+-- ================================================================
 
 SELECT
   DATE(report_date) AS report_date,

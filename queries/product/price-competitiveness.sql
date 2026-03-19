@@ -1,6 +1,11 @@
 -- price-competitiveness.sql
 -- 경쟁사 대비 가격 경쟁력 분석
--- $1: 시작일, $2: 종료일
+-- ================================================================
+-- @param_count  2
+-- @param  $1  DATE  필수  시작일 (YYYY-MM-DD)
+-- @param  $2  DATE  필수  종료일 (YYYY-MM-DD)
+-- @example  bq_run_sql queries/product/price-competitiveness.sql "2026-03-01" "2026-03-19"
+-- ================================================================
 
 WITH product_prices AS (
   -- 자사 상품 가격 및 판매 데이터

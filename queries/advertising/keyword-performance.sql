@@ -1,6 +1,11 @@
 -- keyword-performance.sql
 -- 키워드별 클릭/전환/ROAS 분석
--- $1: 시작일, $2: 종료일
+-- ================================================================
+-- @param_count  2
+-- @param  $1  DATE  필수  시작일 (YYYY-MM-DD)
+-- @param  $2  DATE  필수  종료일 (YYYY-MM-DD)
+-- @example  bq_run_sql queries/advertising/keyword-performance.sql "2026-03-01" "2026-03-19"
+-- ================================================================
 
 SELECT
   keyword,

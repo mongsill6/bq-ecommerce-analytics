@@ -1,6 +1,12 @@
 -- top-sellers.sql
 -- 베스트셀러 TOP N (기간 지정)
--- $1: 시작일, $2: 종료일, $3: TOP N
+-- ================================================================
+-- @param_count  3
+-- @param  $1  DATE     필수  시작일 (YYYY-MM-DD)
+-- @param  $2  DATE     필수  종료일 (YYYY-MM-DD)
+-- @param  $3  INTEGER  필수  상위 N개
+-- @example  bq_run_sql queries/sales/top-sellers.sql "2026-03-01" "2026-03-19" 20
+-- ================================================================
 
 SELECT
   product_id,

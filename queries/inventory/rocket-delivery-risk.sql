@@ -1,5 +1,9 @@
 -- rocket-delivery-risk.sql
 -- 로켓배송 재고 위험 감지 (소진 임박 상품)
+-- ================================================================
+-- @param_count  0
+-- @example  bq_run_sql queries/inventory/rocket-delivery-risk.sql
+-- ================================================================
 
 WITH rocket_sales AS (
   SELECT

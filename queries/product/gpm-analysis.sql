@@ -1,6 +1,11 @@
 -- gpm-analysis.sql
 -- 상품별 GPM(매출총이익률) 분석
--- $1: 시작일, $2: 종료일
+-- ================================================================
+-- @param_count  2
+-- @param  $1  DATE  필수  시작일 (YYYY-MM-DD)
+-- @param  $2  DATE  필수  종료일 (YYYY-MM-DD)
+-- @example  bq_run_sql queries/product/gpm-analysis.sql "2026-03-01" "2026-03-19"
+-- ================================================================
 
 SELECT
   sku,

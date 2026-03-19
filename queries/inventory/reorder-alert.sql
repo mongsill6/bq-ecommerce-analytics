@@ -1,6 +1,12 @@
 -- reorder-alert.sql
 -- 안전재고 기준 발주 필요 상품 알림 (리드타임 고려)
--- 파라미터: $1 = 기본 리드타임 일수 (기본값 7일)
+-- ================================================================
+-- @param_count  1
+-- @param  $1  INTEGER  선택  리드타임 일수 (기본값: 7)
+-- @default  $1  7
+-- @example  bq_run_sql queries/inventory/reorder-alert.sql 7
+-- @example  bq_run_sql queries/inventory/reorder-alert.sql    # 기본값 7일 적용
+-- ================================================================
 
 WITH daily_sales AS (
   SELECT

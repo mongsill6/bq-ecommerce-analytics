@@ -1,5 +1,9 @@
 -- weekly-trend.sql
 -- 주간 매출 트렌드 (최근 N주)
+-- ================================================================
+-- @param_count  0
+-- @example  bq_run_sql queries/sales/weekly-trend.sql
+-- ================================================================
 
 SELECT
   DATE_TRUNC(DATE(order_date), WEEK(MONDAY)) AS week_start,

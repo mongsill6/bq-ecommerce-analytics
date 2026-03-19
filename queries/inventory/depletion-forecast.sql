@@ -1,6 +1,10 @@
 -- depletion-forecast.sql
 -- 이동평균 기반 재고 소진일 예측 (7일/14일/30일 MA)
 -- 단기·중기·장기 추세를 비교하여 재고 소진 시점 예측
+-- ================================================================
+-- @param_count  0
+-- @example  bq_run_sql queries/inventory/depletion-forecast.sql
+-- ================================================================
 
 WITH daily_sales AS (
   SELECT

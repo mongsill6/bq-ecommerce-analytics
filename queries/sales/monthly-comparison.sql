@@ -1,8 +1,11 @@
 -- monthly-comparison.sql
 -- 월간 매출 전년 동기(YoY) 대비 비교
--- $1: 기준 연월 (YYYY-MM, 예: 2026-03)
--- $2: 월간 매출 목표 금액
--- 사용: bq_run_sql queries/sales/monthly-comparison.sql "2026-03" "500000000"
+-- ================================================================
+-- @param_count  2
+-- @param  $1  STRING   필수  기준 연월 (YYYY-MM)
+-- @param  $2  NUMERIC  필수  월간 매출 목표 금액
+-- @example  bq_run_sql queries/sales/monthly-comparison.sql "2026-03" "500000000"
+-- ================================================================
 
 WITH current_month AS (
   SELECT

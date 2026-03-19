@@ -1,5 +1,9 @@
 -- stock-status.sql
 -- 현재 재고 현황 + 일평균 판매량 기반 소진 예측
+-- ================================================================
+-- @param_count  0
+-- @example  bq_run_sql queries/inventory/stock-status.sql
+-- ================================================================
 
 WITH daily_sales AS (
   SELECT

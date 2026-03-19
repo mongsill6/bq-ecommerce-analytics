@@ -1,6 +1,10 @@
 -- daily-sales-summary.sql
 -- 일간 매출 요약 (채널별/카테고리별)
--- 사용: bq_run_sql queries/sales/daily-sales-summary.sql "2026-03-19"
+-- ================================================================
+-- @param_count  1
+-- @param  $1  DATE  필수  조회 날짜 (YYYY-MM-DD)
+-- @example  bq_run_sql queries/sales/daily-sales-summary.sql "2026-03-19"
+-- ================================================================
 
 SELECT
   DATE(order_date) AS sale_date,

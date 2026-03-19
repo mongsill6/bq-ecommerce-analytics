@@ -7,24 +7,208 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
+  shellcheck:
+    name: ShellCheck Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install bats
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq bats
+      - name: Install ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
 
-      - name: ShellCheck — reports/ and utils/
+      - name: Find all shell scripts
+        run: |
+          echo "[CI] .sh 파일 탐색 중..."
+          scripts=$(find scripts/ reports/ utils/ -name '*.sh' -type f | sort)
+          count=$(echo "$scripts" | wc -l)
+          echo "[CI] $count개 스크립트 발견"
+          echo "$scripts"
+
+      - name: ShellCheck — all .sh files
         run: |
           echo "[CI] shellcheck 실행 중..."
-          find reports/ utils/ -name '*.sh' -type f -print0 \
-            | xargs -0 shellcheck -x -e SC1091
+          find scripts/ reports/ utils/ -name '*.sh' -type f -print0 \
+            | xargs -0 shellcheck -x -S warning -e SC1091
           echo "[CI] shellcheck 통과"
 
-      - name: Bats — unit tests
+      - name: Verify shebang lines
+        run: |
+          echo "[CI] shebang 라인 검증 중..."
+          fail=0
+          while IFS= read -r f; do
+            first_line=$(head -1 "$f")
+            if [[ ! "$first_line" =~ ^#!.*bash && ! "$first_line" =~ ^#!.*sh ]]; then
+              echo "ERROR: $f — shebang 누락 (첫 줄: $first_line)"
+              fail=1
+            fi
+          done < <(find scripts/ reports/ utils/ -name '*.sh' -type f)
+          if [ "$fail" -eq 1 ]; then
+            echo "shebang 검증 실패"
+            exit 1
+          fi
+          echo "[CI] shebang 검증 통과"
+
+  sql-validation:
+    name: SQL File Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check SQL files exist
+        run: |
+          echo "[CI] SQL 파일 존재 검증 중..."
+          sql_count=$(find queries/ -name '*.sql' -type f | wc -l)
+          if [ "$sql_count" -eq 0 ]; then
+            echo "ERROR: queries/ 디렉토리에 .sql 파일이 없습니다"
+            exit 1
+          fi
+          echo "[CI] $sql_count개 SQL 파일 발견"
+          find queries/ -name '*.sql' -type f | sort
+
+      - name: Validate SQL comment headers
+        run: |
+          echo "[CI] SQL 주석 헤더 검증 중..."
+          fail=0
+          total=0
+          passed=0
+
+          while IFS= read -r sql_file; do
+            total=$((total + 1))
+            rel_path="${sql_file}"
+            basename=$(basename "$sql_file")
+            file_ok=true
+
+            echo "[$total] $rel_path"
+
+            # 1행: 파일명 주석
+            first_line=$(head -1 "$sql_file")
+            if [[ ! "$first_line" =~ ^--\ .+ ]]; then
+              echo "  ERROR: 파일명 주석 누락 (첫 줄에 '-- $basename' 형식 필요)"
+              file_ok=false
+            fi
+
+            # 2행: 설명 주석
+            second_line=$(sed -n '2p' "$sql_file")
+            if [[ ! "$second_line" =~ ^--\ .+ ]]; then
+              echo "  ERROR: 설명 주석 누락 (둘째 줄에 SQL 설명 필요)"
+              file_ok=false
+            fi
+
+            # @param_count 존재
+            if ! grep -q '@param_count' "$sql_file"; then
+              echo "  ERROR: @param_count 주석 누락"
+              file_ok=false
+            fi
+
+            # @example 존재
+            if ! grep -q '@example' "$sql_file"; then
+              echo "  ERROR: @example 사용법 주석 누락"
+              file_ok=false
+            fi
+
+            # 빈 파일 체크
+            line_count=$(wc -l < "$sql_file")
+            if [ "$line_count" -lt 5 ]; then
+              echo "  ERROR: SQL 파일이 너무 짧음 ($line_count줄) — 최소 5줄 이상 필요"
+              file_ok=false
+            fi
+
+            if $file_ok; then
+              passed=$((passed + 1))
+              echo "  PASS"
+            else
+              fail=1
+            fi
+          done < <(find queries/ -name '*.sql' -type f | sort)
+
+          echo ""
+          echo "=========================================="
+          echo " SQL 주석 헤더 검증 결과"
+          echo "=========================================="
+          echo "  전체: $total / 통과: $passed / 실패: $((total - passed))"
+
+          if [ "$fail" -eq 1 ]; then
+            echo ""
+            echo "SQL 주석 헤더 검증 실패 — 위 ERROR 항목을 수정하세요."
+            exit 1
+          fi
+          echo "[CI] SQL 주석 헤더 검증 통과"
+
+      - name: Validate SQL parameter consistency
+        run: |
+          echo "[CI] SQL 파라미터 일관성 검증 중..."
+          fail=0
+
+          while IFS= read -r sql_file; do
+            rel_path="$sql_file"
+
+            # @param_count에서 선언된 개수
+            declared_count=$(grep -m1 '@param_count' "$sql_file" 2>/dev/null \
+              | sed 's/.*@param_count[[:space:]]*//' | tr -d '[:space:]')
+            [ -z "$declared_count" ] && continue
+
+            # @param으로 선언된 파라미터 수
+            declared_param_count=$(grep -c '@param[[:space:]]*\$[0-9]' "$sql_file" 2>/dev/null || echo 0)
+
+            if [ "$declared_count" -ne "$declared_param_count" ]; then
+              echo "ERROR: $rel_path — @param_count($declared_count)와 @param 선언 수($declared_param_count) 불일치"
+              fail=1
+            fi
+
+            # SQL 본문에서 사용되지만 @param 미선언된 파라미터 체크
+            sql_body=$(grep -v '^--' "$sql_file")
+            used_params=$(echo "$sql_body" | grep -oE '\$[0-9]+' | sort -u || true)
+            declared_params=$(grep '@param[[:space:]]*\$[0-9]' "$sql_file" 2>/dev/null \
+              | grep -oE '\$[0-9]+' | sort -u || true)
+
+            for param in $used_params; do
+              if [ -n "$declared_params" ] && ! echo "$declared_params" | grep -qF "$param"; then
+                echo "ERROR: $rel_path — $param 이 SQL 본문에서 사용되지만 @param 선언 없음"
+                fail=1
+              fi
+            done
+          done < <(find queries/ -name '*.sql' -type f | sort)
+
+          if [ "$fail" -eq 1 ]; then
+            echo "SQL 파라미터 일관성 검증 실패"
+            exit 1
+          fi
+          echo "[CI] SQL 파라미터 일관성 검증 통과"
+
+      - name: Check SQL syntax (basic)
+        run: |
+          echo "[CI] SQL 기본 문법 검증 중..."
+          fail=0
+
+          while IFS= read -r sql_file; do
+            # SELECT 또는 WITH로 시작하는지 확인 (주석 제외)
+            first_keyword=$(grep -v '^--' "$sql_file" | grep -v '^\s*$' | head -1 \
+              | awk '{print toupper($1)}')
+
+            if [[ ! "$first_keyword" =~ ^(SELECT|WITH|CREATE|INSERT|UPDATE|DELETE|DECLARE|MERGE)$ ]]; then
+              echo "WARNING: $sql_file — 첫 SQL 키워드가 '$first_keyword' (예상: SELECT/WITH/CREATE 등)"
+            fi
+
+            # 세미콜론으로 종료되는지 확인
+            last_char=$(grep -v '^\s*$' "$sql_file" | tail -1 | sed 's/[[:space:]]*$//' | tail -c 2)
+            if [ "$last_char" != ";" ]; then
+              echo "WARNING: $sql_file — 세미콜론(;)으로 끝나지 않음"
+            fi
+          done < <(find queries/ -name '*.sql' -type f | sort)
+
+          echo "[CI] SQL 기본 문법 검증 완료"
+
+  test:
+    name: Bats Unit Tests
+    runs-on: ubuntu-latest
+    needs: [shellcheck, sql-validation]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq bats
+
+      - name: Run bats tests
         run: |
           echo "[CI] bats 테스트 실행 중..."
           bats tests/

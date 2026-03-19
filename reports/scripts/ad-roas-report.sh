@@ -16,8 +16,8 @@ log_info "프로젝트: $BQ_PROJECT"
 
 # ─── 1. 캠페인별 ROAS ──────────────────────────────
 log_info "캠페인별 ROAS 조회 중..."
-CAMPAIGN_SQL=$(cat "$SCRIPT_DIR/queries/advertising/roas-by-campaign.sql" \
-  | sed "s/\$1/$START_DATE/g; s/\$2/$END_DATE/g")
+CAMPAIGN_SQL=$(sed "s/\$1/$START_DATE/g; s/\$2/$END_DATE/g" \
+  "$SCRIPT_DIR/queries/advertising/roas-by-campaign.sql")
 bq_to_sheets "$CAMPAIGN_SQL" "$SPREADSHEET_ID" "캠페인ROAS!A2"
 
 # 적자 캠페인 별도 추출
@@ -36,14 +36,14 @@ bq_to_sheets "$DEFICIT_SQL" "$SPREADSHEET_ID" "적자캠페인!A2"
 
 # ─── 2. 일별 광고비 효율 추이 ──────────────────────
 log_info "일별 광고비 효율 추이 조회 중..."
-EFFICIENCY_SQL=$(cat "$SCRIPT_DIR/queries/advertising/ad-spend-efficiency.sql" \
-  | sed "s/\$1/$START_DATE/g; s/\$2/$END_DATE/g")
+EFFICIENCY_SQL=$(sed "s/\$1/$START_DATE/g; s/\$2/$END_DATE/g" \
+  "$SCRIPT_DIR/queries/advertising/ad-spend-efficiency.sql")
 bq_to_sheets "$EFFICIENCY_SQL" "$SPREADSHEET_ID" "광고효율추이!A2"
 
 # ─── 3. 키워드별 성과 ──────────────────────────────
 log_info "키워드별 성과 조회 중..."
-KEYWORD_SQL=$(cat "$SCRIPT_DIR/queries/advertising/keyword-performance.sql" \
-  | sed "s/\$1/$START_DATE/g; s/\$2/$END_DATE/g")
+KEYWORD_SQL=$(sed "s/\$1/$START_DATE/g; s/\$2/$END_DATE/g" \
+  "$SCRIPT_DIR/queries/advertising/keyword-performance.sql")
 bq_to_sheets "$KEYWORD_SQL" "$SPREADSHEET_ID" "키워드성과!A2"
 
 # 중단 검토 키워드 추출

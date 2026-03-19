@@ -5,10 +5,12 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # 공통 유틸리티 로드 (로깅, 에러 핸들링, 의존성 체크)
+# shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # .env 로드
 if [ -f "$SCRIPT_DIR/.env" ]; then
+  # shellcheck source=/dev/null
   set -a; source "$SCRIPT_DIR/.env"; set +a
 fi
 

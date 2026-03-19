@@ -14,14 +14,14 @@ log_info "프로젝트: $BQ_PROJECT"
 # 1. 일간 매출 요약
 log_info "매출 데이터 조회 중..."
 bq_to_sheets \
-  "$(cat "$SCRIPT_DIR/queries/sales/daily-sales-summary.sql" | sed "s/\$1/$DATE/g")" \
+  "$(sed "s/\$1/$DATE/g" "$SCRIPT_DIR/queries/sales/daily-sales-summary.sql")" \
   "$SPREADSHEET_ID" \
   "일간매출!A2"
 
 # 2. TOP 10 상품
 log_info "베스트셀러 조회 중..."
 bq_to_sheets \
-  "$(cat "$SCRIPT_DIR/queries/sales/top-sellers.sql" | sed "s/\$1/$DATE/g; s/\$2/$DATE/g; s/\$3/10/g")" \
+  "$(sed "s/\$1/$DATE/g; s/\$2/$DATE/g; s/\$3/10/g" "$SCRIPT_DIR/queries/sales/top-sellers.sql")" \
   "$SPREADSHEET_ID" \
   "베스트셀러!A2"
 

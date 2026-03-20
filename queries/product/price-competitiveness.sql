@@ -1,10 +1,44 @@
--- price-competitiveness.sql
--- 경쟁사 대비 가격 경쟁력 분석
 -- ================================================================
--- @param_count  2
--- @param  $1  DATE  필수  시작일 (YYYY-MM-DD)
--- @param  $2  DATE  필수  종료일 (YYYY-MM-DD)
--- @example  bq_run_sql queries/product/price-competitiveness.sql "2026-03-01" "2026-03-19"
+-- 파일: price-competitiveness.sql
+-- 목적: 카테고리·채널 내 가격 포지셔닝과 경쟁력을 분석합니다.
+--       카테고리 평균가 대비 가격 지수(Price Index)와 백분위를 산출하고,
+--       가격대를 저가~고가 5단계로 분류합니다.
+--       가격+마진 조합으로 경쟁력 라벨을 자동 판정합니다:
+--       가격우위+고마진 / 가격우위+저마진 / 적정가격 / 프리미엄 / 고가(판매부진)
+--       가격 전략 수립, 할인 정책 검토, 프리미엄 포지셔닝 평가에 활용됩니다.
+--       5개 이상 판매된 상품만 포함합니다.
+-- ================================================================
+--
+-- ■ 파라미터
+--   $1  DATE  필수  시작일 (YYYY-MM-DD)
+--   $2  DATE  필수  종료일 (YYYY-MM-DD)
+--
+-- ■ 출력 컬럼
+--   sku                   STRING   SKU 코드
+--   product_name          STRING   상품명
+--   category              STRING   상품 카테고리
+--   channel               STRING   판매 채널
+--   avg_selling_price     FLOAT64  평균 판매가 (원)
+--   category_avg_price    FLOAT64  카테고리 평균가 (원)
+--   price_index           FLOAT64  가격 지수 (%, 100=카테고리 평균)
+--   price_percentile      FLOAT64  카테고리 내 가격 백분위 (%)
+--   total_qty             INT64    총 판매 수량
+--   revenue               FLOAT64  총 매출액 (원)
+--   margin_pct            FLOAT64  평균 마진율 (%)
+--   price_tier            STRING   가격대 (저가/중저가/중간/중고가/고가)
+--   competitiveness_label STRING   경쟁력 판정 결과
+--   pct_of_max_price      FLOAT64  카테고리 최고가 대비 비율 (%)
+--   category_sku_count    INT64    카테고리 내 SKU 수
+--
+-- ■ 실행 방법
+--   bq_run_sql queries/product/price-competitiveness.sql "2026-03-01" "2026-03-19"
+--
+-- ■ 예시 출력
+--   sku       | product_name   | category | avg_selling_price | category_avg_price | price_index | price_percentile | margin_pct | price_tier | competitiveness_label
+--   ACS06789  | 울트라 케이스  | case     | 30000             | 25000              | 120.0       | 85.0             | 55.2       | 중고가     | 프리미엄(판매호조)
+--   ACS05555  | 에어핏 케이스  | case     | 18000             | 25000              | 72.0        | 25.0             | 35.0       | 중저가     | 가격우위+고마진
+--   ACS09999  | 고급 가죽케이스| case     | 55000             | 25000              | 220.0       | 100.0            | 62.0       | 고가       | 고가(판매부진)
+--
 -- ================================================================
 
 WITH product_prices AS (

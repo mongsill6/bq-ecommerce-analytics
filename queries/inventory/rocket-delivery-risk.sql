@@ -1,8 +1,32 @@
--- rocket-delivery-risk.sql
--- 로켓배송 재고 위험 감지 (소진 임박 상품)
 -- ================================================================
--- @param_count  0
--- @example  bq_run_sql queries/inventory/rocket-delivery-risk.sql
+-- 파일: rocket-delivery-risk.sql
+-- 목적: 쿠팡 로켓배송 채널 전용 재고 위험 감지 쿼리입니다.
+--       14일 이내 소진 예상 상품만 필터링하여 즉시 대응이 필요한 SKU를 식별합니다.
+--       판매 가속도(최근7일 vs 이전7일)를 계산하여 급증 추세를 조기에 감지합니다.
+--       로켓배송 품절 방지, 긴급 입고 판단, 일일 알림에 활용됩니다.
+-- ================================================================
+--
+-- ■ 파라미터
+--   없음 (coupang_rocket 채널 자동 필터링)
+--
+-- ■ 출력 컬럼
+--   sku                    STRING   SKU 코드
+--   product_name           STRING   상품명
+--   rocket_stock           INT64    로켓배송 창고 현재 재고
+--   avg_daily_sales        FLOAT64  14일 일평균 판매량
+--   peak_daily_sales       FLOAT64  14일 내 최대 일판매량
+--   days_remaining         FLOAT64  잔여 재고일 (현재고 / 일평균)
+--   sales_acceleration_pct FLOAT64  판매 가속도 (%, 양수=증가추세)
+--   risk_level             STRING   위험 등급 (즉시입고/입고필요/모니터링/안전)
+--
+-- ■ 실행 방법
+--   bq_run_sql queries/inventory/rocket-delivery-risk.sql
+--
+-- ■ 예시 출력
+--   sku       | product_name          | rocket_stock | avg_daily_sales | peak_daily_sales | days_remaining | sales_acceleration_pct | risk_level
+--   ACS06789  | 아이폰15 울트라케이스 | 15           | 8.2             | 25               | 2              | 32.5                   | 즉시 입고
+--   AGL07123  | 갤럭시S24 강화유리    | 42           | 5.1             | 12               | 8              | -5.3                   | 모니터링
+--
 -- ================================================================
 
 WITH rocket_sales AS (

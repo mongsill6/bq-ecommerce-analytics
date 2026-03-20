@@ -1,11 +1,41 @@
--- reorder-alert.sql
--- 안전재고 기준 발주 필요 상품 알림 (리드타임 고려)
 -- ================================================================
--- @param_count  1
--- @param  $1  INTEGER  선택  리드타임 일수 (기본값: 7)
--- @default  $1  7
--- @example  bq_run_sql queries/inventory/reorder-alert.sql 7
--- @example  bq_run_sql queries/inventory/reorder-alert.sql    # 기본값 7일 적용
+-- 파일: reorder-alert.sql
+-- 목적: 안전재고(Safety Stock) 및 발주점(ROP) 기반으로 발주가 필요한 상품을 알림합니다.
+--       리드타임을 고려하여 발주 시점과 발주 수량을 자동 계산합니다.
+--       안전재고 산식: Z(1.65, 95% 서비스 레벨) x 판매표준편차 x sqrt(리드타임)
+--       발주점(ROP) = 리드타임 수요 + 안전재고
+--       ROP의 120% 이하인 상품만 출력하여 선제적 발주를 지원합니다.
+-- ================================================================
+--
+-- ■ 파라미터
+--   $1  INTEGER  선택  리드타임 일수 (기본값: 7)
+--
+-- ■ 출력 컬럼
+--   sku                STRING   SKU 코드
+--   product_name       STRING   상품명
+--   warehouse          STRING   창고명
+--   current_stock      INT64    현재 재고
+--   avg_daily_sales    FLOAT64  30일 일평균 판매량
+--   sales_stddev       FLOAT64  판매량 표준편차
+--   lead_time_days     INT64    리드타임 (일)
+--   lead_time_demand   FLOAT64  리드타임 중 예상 소비량
+--   safety_stock       FLOAT64  안전재고 수량
+--   reorder_point      FLOAT64  발주점 (ROP)
+--   days_of_stock      FLOAT64  현재 재고 소진 예상일
+--   order_quantity     FLOAT64  발주 필요 수량 (ROP - 현재고)
+--   days_until_reorder FLOAT64  발주까지 남은 여유일
+--   alert_level        STRING   알림 등급 (긴급발주/발주필요/발주임박/여유)
+--
+-- ■ 실행 방법
+--   bq_run_sql queries/inventory/reorder-alert.sql 7
+--   bq_run_sql queries/inventory/reorder-alert.sql 14    # 해외 발주 (14일 리드타임)
+--   bq_run_sql queries/inventory/reorder-alert.sql       # 기본값 7일 적용
+--
+-- ■ 예시 출력
+--   sku       | product_name  | warehouse | current_stock | avg_daily_sales | reorder_point | order_quantity | days_until_reorder | alert_level
+--   ACS06789  | 아이폰15 울트라| coupang   | 30            | 12.3            | 110           | 80             | -7                 | 긴급발주
+--   AGL07123  | 갤럭시S24 유리 | own       | 95            | 8.5             | 82            | 0              | 2                  | 발주임박
+--
 -- ================================================================
 
 WITH daily_sales AS (

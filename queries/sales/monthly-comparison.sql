@@ -1,10 +1,47 @@
--- monthly-comparison.sql
--- 월간 매출 전년 동기(YoY) 대비 비교
 -- ================================================================
--- @param_count  2
--- @param  $1  STRING   필수  기준 연월 (YYYY-MM)
--- @param  $2  NUMERIC  필수  월간 매출 목표 금액
--- @example  bq_run_sql queries/sales/monthly-comparison.sql "2026-03" "500000000"
+-- 파일: monthly-comparison.sql
+-- 목적: 지정 월의 매출을 전년 동월(YoY)과 비교하고, 목표 대비 달성률을 산출합니다.
+--       채널별·카테고리별 상세 비교 + 전체 합산 서머리를 두 결과셋으로 반환합니다.
+--       월간 실적 리포트, KPI 달성률 추적, 경영진 보고에 활용됩니다.
+--       연간 누적(YTD) 매출도 함께 제공합니다.
+-- ================================================================
+--
+-- ■ 파라미터
+--   $1  STRING   필수  기준 연월 (YYYY-MM, 예: "2026-03")
+--   $2  NUMERIC  필수  월간 매출 목표 금액 (원, 예: "500000000")
+--
+-- ■ 출력 컬럼 (1번째 결과: 채널별·카테고리별 상세)
+--   channel               STRING   판매 채널
+--   category              STRING   상품 카테고리
+--   cur_orders            INT64    당월 주문 수
+--   cur_revenue           FLOAT64  당월 매출
+--   cur_profit            FLOAT64  당월 매출총이익
+--   cur_gpm_pct           FLOAT64  당월 GPM (%)
+--   yoy_orders            INT64    전년 동월 주문 수
+--   yoy_revenue           FLOAT64  전년 동월 매출
+--   yoy_profit            FLOAT64  전년 동월 매출총이익
+--   yoy_gpm_pct           FLOAT64  전년 동월 GPM (%)
+--   revenue_yoy_pct       FLOAT64  매출 YoY 증감률 (%)
+--   orders_yoy_pct        FLOAT64  주문 YoY 증감률 (%)
+--   profit_yoy_pct        FLOAT64  이익 YoY 증감률 (%)
+--   target_contribution_pct FLOAT64 목표 매출 대비 기여율 (%)
+--
+-- ■ 출력 컬럼 (2번째 결과: 전체 합산 서머리)
+--   위 컬럼 + target_achievement_pct (목표 달성률 %)
+--            + ytd_revenue (연간 누적 매출)
+--
+-- ■ 실행 방법
+--   bq_run_sql queries/sales/monthly-comparison.sql "2026-03" "500000000"
+--
+-- ■ 예시 출력 (상세)
+--   channel  | category | cur_orders | cur_revenue | cur_gpm_pct | yoy_revenue | revenue_yoy_pct | target_contribution_pct
+--   coupang  | case     | 1200       | 48000000    | 52.3        | 42000000    | 14.3            | 9.6
+--   naver    | film     | 650        | 19500000    | 45.1        | 18000000    | 8.3             | 3.9
+--
+-- ■ 예시 출력 (서머리)
+--   channel     | cur_revenue | yoy_revenue | revenue_yoy_pct | target_achievement_pct | ytd_revenue
+--   ** TOTAL ** | 250000000   | 220000000   | 13.6            | 50.0                   | 720000000
+--
 -- ================================================================
 
 WITH current_month AS (

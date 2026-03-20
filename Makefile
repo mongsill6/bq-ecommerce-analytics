@@ -1,4 +1,4 @@
-.PHONY: help install lint test validate
+.PHONY: help install lint test validate schema-doc
 
 SHELL_FILES := $(shell find reports/ utils/ scripts/ -name '*.sh' -type f 2>/dev/null)
 SQL_FILES   := $(shell find queries/ -name '*.sql' -type f)
@@ -16,6 +16,7 @@ help: ## 사용법 출력
 	@echo "  make lint      # shellcheck으로 모든 .sh 파일 검사"
 	@echo "  make test      # bats 단위 테스트 실행"
 	@echo "  make validate  # SQL 파일 검증 (문법/주석/파라미터)"
+	@echo "  make schema-doc DATASET=coupang  # 스키마 문서 자동 생성"
 
 install: ## 필수 도구 설치 여부 확인 (bq, gws, jq, shellcheck)
 	@echo "[INSTALL] 의존성 확인 중..."
@@ -56,3 +57,7 @@ validate: ## SQL 파일 검증 (bq dry_run + 주석/파라미터 체크)
 	@echo "[VALIDATE] SQL 검증 시작..."
 	@bash scripts/validate-queries.sh
 	@echo "[VALIDATE] 완료"
+
+schema-doc: ## 데이터셋 스키마를 마크다운 문서로 생성 (DATASET=이름)
+	@if [ -z "$(DATASET)" ]; then echo "[ERROR] DATASET을 지정하세요: make schema-doc DATASET=coupang"; exit 1; fi
+	@bash scripts/bq-schema-doc.sh $(DATASET)
